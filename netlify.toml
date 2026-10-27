@@ -1,0 +1,8 @@
+# Configuração do site Bolso em Dia (não precisa mexer)
+[build]
+  publish = "public"
+  functions = "netlify/functions"
+  command = ""
+
+[functions]
+  node_bundler = "esbuild"

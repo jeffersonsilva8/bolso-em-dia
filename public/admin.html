@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex,nofollow"><title>Painel · Bolso em Dia</title>
+<style>
+:root{--bg:#0E1513;--card:#16201D;--line:#26332F;--ink:#EAF2EE;--ink2:#9FB3AB;--green:#1FBF75;--red:#F0605A;--gold:#F2B64A}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.45 system-ui,-apple-system,Segoe UI,Roboto,sans-serif}
+.wrap{max-width:760px;margin:0 auto;padding:20px 16px 60px}h1{font-size:24px;margin:6px 0 2px}h2{font-size:17px;margin:26px 0 10px}
+.sub{color:var(--ink2);margin:0 0 18px}.card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:14px}
+input,textarea{width:100%;background:#0B110F;border:1.5px solid var(--line);border-radius:12px;color:var(--ink);padding:12px;font:inherit;outline:none}input:focus,textarea:focus{border-color:var(--green)}
+button{font:inherit;font-weight:800;border:0;border-radius:12px;padding:12px 16px;background:var(--green);color:#04210F;cursor:pointer}button.g{background:#22302B;color:var(--ink)}button.r{background:#3A1F1E;color:#FFB3AE}button.s{padding:8px 11px;font-size:13px;border-radius:10px}
+button:disabled{opacity:.5}.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}.stats div{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:12px}.stats b{display:block;font-size:24px}.stats small{color:var(--ink2)}
+.it{border-top:1px solid var(--line);padding:12px 0}.it:first-child{border-top:0}.em{font-weight:800;word-break:break-all}.meta{color:var(--ink2);font-size:13px;margin:3px 0 8px}
+.tag{display:inline-block;font-size:11.5px;font-weight:900;border-radius:6px;padding:2px 7px;margin-right:4px}.ok{background:#123B27;color:#7FF0C2}.no{background:#3A1F1E;color:#FFB3AE}.wt{background:#3B3017;color:#F7D58A}
+.msg{margin-top:10px;font-size:14px;color:var(--ink2)}code{background:#0B110F;border:1px solid var(--line);border-radius:8px;padding:2px 6px;word-break:break-all}
+[hidden]{display:none!important}
+</style></head><body><div class="wrap">
+<h1>✓ Painel do Bolso em Dia</h1><p class="sub">Só você acessa. Aqui você vê quem comprou e resolve trocas de celular.</p>
+
+<div id="login" class="card"><b>Senha do painel</b><p class="meta">É a senha que você colocou no Netlify como ADMIN_SENHA.</p>
+<div class="row"><input id="pw" type="password" placeholder="Sua senha" style="flex:1;min-width:200px"><button id="go">Entrar</button></div><div id="lmsg" class="msg"></div></div>
+
+<div id="app" hidden>
+  <div class="stats"><div><b id="sT">0</b><small>compradores</small></div><div><b id="sA">0</b><small>já entraram no app</small></div><div><b id="sB">0</b><small>bloqueados</small></div></div>
+  <div id="whInfo" class="msg"></div>
+  <h2>Compradores</h2>
+  <div class="card"><input id="q" placeholder="🔎 Procurar e-mail ou nome"><div id="list" style="margin-top:8px"></div></div>
+
+  <h2>Adicionar compradores na mão</h2>
+  <div class="card"><p class="meta" style="margin-top:0">Use para quem comprou <b>antes</b> do sistema novo e ainda não tinha entrado, ou se alguma venda não chegou. Cole os e-mails, um por linha.</p>
+  <textarea id="add" rows="4" placeholder="maria@gmail.com&#10;joao@hotmail.com"></textarea><div class="row" style="margin-top:8px"><button id="addB">Adicionar</button><span id="amsg" class="msg" style="margin:0"></span></div></div>
+
+  <h2>Últimos avisos da Kiwify</h2>
+  <div class="card"><div class="row"><button class="g s" id="logB">Atualizar</button></div><div id="logs" class="msg"></div></div>
+  <p class="msg" style="margin-top:24px"><button class="g s" id="sair">Sair do painel</button></p>
+</div>
+</div>
+<script>
+(()=>{const $=s=>document.querySelector(s);let PW='';try{PW=sessionStorage.getItem('bd-adm')||''}catch(e){}
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const dt=s=>s?new Date(s).toLocaleString('pt-BR',{day:'2-digit',month:'2-digit',year:'2-digit',hour:'2-digit',minute:'2-digit'}):'—';
+async function call(acao,extra){const r=await fetch('/api/admin',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({senha:PW,acao,...extra})});let j={};try{j=await r.json()}catch(e){}return {status:r.status,...j}}
+let ITENS=[];
+async function entrar(){$('#lmsg').textContent='Conferindo…';const r=await call('entrar');
+  if(r.ok){try{sessionStorage.setItem('bd-adm',PW)}catch(e){}$('#login').hidden=true;$('#app').hidden=false;$('#whInfo').innerHTML=r.webhook?'✅ Ligação com a Kiwify configurada.':'⚠️ Falta configurar a KIWIFY_CHAVE no Netlify.';carregar();logs()}
+  else{$('#lmsg').textContent=r.erro==='sem_senha_configurada'?'Falta criar a ADMIN_SENHA no Netlify.':r.status===401?'Senha errada.':'Não consegui conectar. Tente de novo.';try{sessionStorage.removeItem('bd-adm')}catch(e){}}}
+async function carregar(){$('#list').innerHTML='<p class="msg">Carregando…</p>';const r=await call('listar');ITENS=r.itens||[];
+  $('#sT').textContent=ITENS.length;$('#sA').textContent=ITENS.filter(x=>x.aparelho).length;$('#sB').textContent=ITENS.filter(x=>x.status!=='pago').length;desenhar()}
+function desenhar(){const q=$('#q').value.trim().toLowerCase();const it=ITENS.filter(x=>!q||x.email.includes(q)||String(x.nome||'').toLowerCase().includes(q));
+  $('#list').innerHTML=it.length?it.map(x=>`<div class="it"><div class="em">${esc(x.email)}</div>
+   <div class="meta">${x.nome?esc(x.nome)+' · ':''}comprou ${dt(x.criadoEm)}${x.origem==='manual'?' (adicionado na mão)':''}</div>
+   <div style="margin-bottom:8px">${x.status==='pago'?'<span class="tag ok">PAGO</span>':'<span class="tag no">BLOQUEADO / REEMBOLSO</span>'}${x.aparelho?`<span class="tag ok">📱 usando desde ${dt(x.ativadoEm)}</span>`:'<span class="tag wt">ainda não entrou</span>'}${x.trocas?`<span class="tag wt">trocou de celular ${x.trocas}x</span>`:''}</div>
+   <div class="row">${x.aparelho||x.ultimaTroca?`<button class="g s" data-a="liberarTroca" data-e="${esc(x.email)}">🔓 Liberar troca de celular</button>`:''}
+   ${x.status==='pago'?`<button class="r s" data-a="bloquear" data-e="${esc(x.email)}">Bloquear</button>`:`<button class="g s" data-a="desbloquear" data-e="${esc(x.email)}">Desbloquear</button>`}
+   <button class="r s" data-a="apagar" data-e="${esc(x.email)}">Apagar</button></div></div>`).join(''):'<p class="msg">Ninguém por aqui ainda.</p>'}
+async function logs(){const r=await call('logs');const it=r.itens||[];$('#logs').innerHTML=it.length?it.map(l=>`<div class="it"><b>${esc(l.acao)}</b> · ${esc(l.email||'(sem e-mail)')}<div class="meta" style="margin:2px 0 0">${dt(l.quando)} · ${esc(l.evento||l.status||'')}</div></div>`).join(''):'Nenhum aviso recebido ainda. Quando acontecer uma venda, aparece aqui.'}
+$('#go').onclick=()=>{PW=$('#pw').value;entrar()};$('#pw').onkeydown=e=>{if(e.key==='Enter'){PW=$('#pw').value;entrar()}};
+$('#q').oninput=desenhar;$('#logB').onclick=logs;$('#sair').onclick=()=>{try{sessionStorage.removeItem('bd-adm')}catch(e){}location.reload()};
+$('#addB').onclick=async()=>{const r=await call('adicionar',{emails:$('#add').value});$('#amsg').textContent=r.ok?`✅ ${r.n} e-mail(s) liberado(s).`:'Não deu certo.';if(r.ok){$('#add').value='';carregar()}};
+$('#list').onclick=async e=>{const b=e.target.closest('[data-a]');if(!b)return;const a=b.dataset.a,em=b.dataset.e;
+  const perg={liberarTroca:`Liberar ${em} para entrar em um celular novo agora?`,bloquear:`Bloquear o acesso de ${em}?`,apagar:`Apagar ${em} da lista? A pessoa não vai mais conseguir entrar.`}[a];
+  if(perg&&!confirm(perg))return;b.disabled=true;await call(a,{email:em});carregar()};
+if(PW)entrar();})();
+</script></body></html>
